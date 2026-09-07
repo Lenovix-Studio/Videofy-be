@@ -1,0 +1,64 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Video {
+  id            String   @id @default(uuid())
+  title         String
+  description   String?  @db.Text
+  videoUrl      String   
+  thumbnailUrl  String?  
+  filePath      String   
+  thumbnailPath String?  
+  fileName      String
+  duration      Int      @default(0)
+  size          BigInt   @default(0)
+  mimeType      String   @default("video/mp4")
+  uploader      String   @default("Admin")
+  views         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  tags          VideoTag[]
+  favorites     Favorite[]
+  histories     History[]
+}
+
+model Tag {
+  id     String     @id @default(uuid())
+  name   String     @unique
+  slug   String     @unique
+  videos VideoTag[]
+}
+
+model VideoTag {
+  videoId String
+  tagId   String
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([videoId, tagId])
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  videoId   String   @unique
+  createdAt DateTime @default(now())
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+}
+
+model History {
+  id        String   @id @default(uuid())
+  videoId   String
+  watchedAt DateTime @default(now())
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([watchedAt])
+}
