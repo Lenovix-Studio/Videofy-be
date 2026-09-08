@@ -73,10 +73,6 @@ export class UploadService {
           relativeThumbPath = path
             .relative(this.storageRoot, generatedThumbFullPath)
             .replace(/\\/g, '/');
-
-          this.logger.log(
-            `Berhasil membuat thumbnail otomatis: ${relativeThumbPath}`,
-          );
         } catch (err: any) {
           this.logger.warn(
             `Lanjut tanpa thumbnail karena error pemrosesan: ${err.message}`,
@@ -135,6 +131,7 @@ export class UploadService {
           data: {
             title: dto.title,
             description: dto.description || '',
+            source: dto.source || '',
             videoUrl: `/media/${relativeVideoPath}`,
             thumbnailUrl: relativeThumbPath
               ? `/media/${relativeThumbPath}`

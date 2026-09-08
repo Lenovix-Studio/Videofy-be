@@ -37,4 +37,9 @@ export class UploadVideoDto {
     description: 'File thumbnail (jpg, png)',
   })
   thumbnail?: any;
+
+  @ApiPropertyOptional({ description: 'Sourve Video', example: 'Youtube' })
+  @IsString()
+  @IsOptional()
+  source?: string;
 }

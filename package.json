@@ -19,7 +19,9 @@
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
+    "db:generate:dev": "bun --env-file=.env.dev prisma generate",
     "db:push:dev": "bun --env-file=.env.dev prisma db push",
+    "db:pull:dev": "bun --env-file=.env.dev prisma db pull",
     "db:push:prod": "bun --env-file=.env prisma db push"
   },
   "dependencies": {
