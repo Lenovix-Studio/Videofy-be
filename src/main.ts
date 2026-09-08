@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { ValidationPipe } from '@nestjs/common';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.dev') });
 
@@ -30,6 +31,13 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+    }),
+  );
 
   const port = process.env.PORT || 3001;
   await app.listen(port);
