@@ -24,10 +24,13 @@ export class SystemService {
         message: 'Database dan file fisik berhasil dibersihkan.',
         timestamp: new Date().toISOString(),
       };
-    } catch (error) {
-      this.logger.error('Gagal melakukan reset sistem', error);
+    } catch (error: any) {
+      this.logger.error(
+        `Gagal melakukan reset sistem: ${error.message}`,
+        error.stack,
+      );
       throw new InternalServerErrorException(
-        'Gagal mereset database atau file fisik.',
+        `Gagal mereset database atau file fisik: ${error.message || ''}`,
       );
     }
   }
@@ -59,12 +62,22 @@ export class SystemService {
         await fs.rm(filePath, { recursive: true, force: true });
       }
 
-      this.logger.log(`Storage di ${storageDir} berhasil dibersihkan.`);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      await fs.mkdir(path.join(storageDir, 'thumbnails'), { recursive: true });
+
+      await fs.mkdir(path.join(storageDir, 'videos'), { recursive: true });
+
+      this.logger.log(
+        `Storage di ${storageDir} berhasil dibersihkan dan diinisialisasi ulang.`,
+      );
+    } catch (error: any) {
+      if (error.code === 'ENOENT') {
         await fs.mkdir(storageDir, { recursive: true });
+        await fs.mkdir(path.join(storageDir, 'thumbnails'), {
+          recursive: true,
+        });
+
         this.logger.log(
-          `Folder storage tidak ditemukan, membuat baru di ${storageDir}.`,
+          `Folder storage tidak ditemukan, membuat baru terstruktur di ${storageDir}.`,
         );
       } else {
         throw error;
