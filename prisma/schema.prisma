@@ -23,6 +23,7 @@ model Video {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   source        String?    @db.VarChar(100)
+  isFavorite    Boolean    @default(false)
   favorites     Favorite?
   histories     History[]
   tags          VideoTag[]

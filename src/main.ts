@@ -30,7 +30,7 @@ async function bootstrap() {
     .setVersion('1.0')
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('/docs', app, document);
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -39,9 +39,13 @@ async function bootstrap() {
     }),
   );
 
+  (BigInt.prototype as any).toJSON = function () {
+    return Number(this);
+  };
+
   const port = process.env.PORT || 3001;
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}`);
-  console.log(`Swagger UI available on: http://localhost:${port}/api/docs`);
+  console.log(`Swagger UI available on: http://localhost:${port}/docs`);
 }
 bootstrap();
