@@ -20,6 +20,7 @@ export class VideosService {
           title: true,
           videoUrl: true,
           thumbnailUrl: true,
+          duration: true,
           createdAt: true,
         },
         orderBy: {
