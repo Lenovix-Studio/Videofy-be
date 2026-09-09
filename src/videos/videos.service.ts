@@ -1,11 +1,62 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import * as path from 'path';
+import * as fs from 'fs/promises';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GetVideosQueryDto } from './dto/get-videos-query.dto';
 import { VideoDetailResponseDto } from './dto/video-detail-response.dto';
 
 @Injectable()
 export class VideosService {
+  private readonly logger = new Logger(VideosService.name);
   constructor(private readonly prisma: PrismaService) {}
+
+  // Helper hapus file fisik dengan aman
+  private async safeDeleteFile(relativePathFromDb: string | null) {
+    if (!relativePathFromDb) return;
+
+    try {
+      const storageBasePath =
+        process.env.STORAGE_RELATIVE_PATH || '../infra/storage/dev';
+      const absolutePath = path.isAbsolute(relativePathFromDb)
+        ? relativePathFromDb
+        : path.resolve(process.cwd(), storageBasePath, relativePathFromDb);
+
+      await fs.unlink(absolutePath);
+      this.logger.log(`Berhasil menghapus file fisik: ${absolutePath}`);
+    } catch (err: any) {
+      if (err.code === 'ENOENT') {
+        this.logger.warn(
+          `File tidak ditemukan saat akan dihapus: ${relativePathFromDb}`,
+        );
+      } else {
+        this.logger.error(
+          `Gagal menghapus file (${relativePathFromDb}): ${err.message}`,
+        );
+      }
+    }
+  }
+
+  async deleteVideo(id: string): Promise<{ message: string }> {
+    const video = await this.prisma.video.findUnique({
+      where: { id },
+    });
+
+    if (!video) {
+      throw new NotFoundException(`Video dengan ID ${id} tidak ditemukan`);
+    }
+
+    await this.safeDeleteFile(video.filePath);
+    await this.safeDeleteFile(video.thumbnailPath);
+
+    await this.prisma.$transaction([
+      this.prisma.videoTag.deleteMany({ where: { videoId: id } }),
+      this.prisma.favorite.deleteMany({ where: { videoId: id } }),
+      this.prisma.history.deleteMany({ where: { videoId: id } }),
+      this.prisma.video.delete({ where: { id } }),
+    ]);
+
+    return { message: 'Video dan file fisik berhasil dihapus' };
+  }
 
   async getVideoDetail(id: string): Promise<VideoDetailResponseDto> {
     const video = await this.prisma.video.findUnique({

@@ -11,7 +11,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from 'ffmpeg-static';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadVideoDto } from './dto/upload-video.dto';
-import { generateThumbnailFromVideo, safeDeleteFile } from '../helper/upload';
+import { generateThumbnailFromVideo, safeDeleteFile } from '../lib/helper';
 
 if (ffmpegInstaller) {
   ffmpeg.setFfmpegPath(ffmpegInstaller);
