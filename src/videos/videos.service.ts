@@ -9,11 +9,63 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { GetVideosQueryDto } from './dto/get-videos-query.dto';
 import { VideoDetailResponseDto } from './dto/video-detail-response.dto';
-import { DeleteFile } from '../lib/helper';
+import { DeleteFile, formatDate, formatDuration } from '../lib/helper';
 
 @Injectable()
 export class VideosService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async getRelatedVideos(videoId: string, limit = 10) {
+    const currentVideo = await this.prisma.video.findUnique({
+      where: { id: videoId },
+    });
+
+    if (!currentVideo) {
+      throw new NotFoundException('Video tidak ditemukan');
+    }
+
+    const relatedVideos = await this.prisma.$queryRaw<any[]>`
+      SELECT 
+        v.id,
+        v.title,
+        v."thumbnailUrl",
+        v.duration,
+        v."createdAt",
+        v.views,
+        COUNT(vt_other."tagId")::int AS "sharedTagsCount",
+        -- Cek apakah video ini sudah pernah Anda tonton
+        CASE 
+          WHEN EXISTS (SELECT 1 FROM public."History" h WHERE h."videoId" = v.id) THEN 1 
+          ELSE 0 
+        END AS "isWatched",
+        -- Cek apakah video ini termasuk favorit Anda
+        CASE 
+          WHEN EXISTS (SELECT 1 FROM public."Favorite" f WHERE f."videoId" = v.id) THEN 1 
+          ELSE 0 
+        END AS "isFavoriteVideo"
+      FROM public."Video" v
+      -- Ambil tag dari video yang sedang ditonton
+      LEFT JOIN public."VideoTag" vt_current ON vt_current."videoId" = ${videoId}
+      -- Hubungkan dengan video lain yang punya tag sama
+      LEFT JOIN public."VideoTag" vt_other ON vt_other."tagId" = vt_current."tagId" AND vt_other."videoId" = v.id
+      WHERE v.id != ${videoId}
+      GROUP BY v.id
+      ORDER BY 
+        "isWatched" ASC,            -- 1. Utamakan yang BELUM ditonton (0 akan di atas 1)
+        "sharedTagsCount" DESC,     -- 2. Utamakan yang tag-nya paling mirip
+        "isFavoriteVideo" DESC,     -- 3. Utamakan yang Anda favoritkan
+        v.views DESC                -- 4. Utamakan yang views-nya paling banyak
+      LIMIT ${limit};
+    `;
+
+    return relatedVideos.map((video) => ({
+      id: video.id,
+      title: video.title,
+      thumbnail: video.thumbnailUrl || '/placeholder-thumbnail.jpg',
+      duration: formatDuration(video.duration),
+      date: formatDate(video.createdAt),
+    }));
+  }
 
   async toggleFavorite(videoId: string): Promise<{ isFavorite: boolean }> {
     const videoExists = await this.prisma.video.findUnique({

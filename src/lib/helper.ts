@@ -4,6 +4,27 @@ import { Logger } from '@nestjs/common';
 import ffmpeg from 'fluent-ffmpeg';
 const logger = new Logger('FFmpegUtils');
 
+// Format Date
+export function formatDate(date: Date): string {
+  return new Date(date).toLocaleDateString('id-ID', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+// Format Duration
+export function formatDuration(seconds: number): string {
+  if (!seconds) return '00:00';
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  return hrs > 0
+    ? `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    : `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
 // Delete file
 export async function DeleteFile(relativePathFromDb: string | null) {
   if (!relativePathFromDb) return;

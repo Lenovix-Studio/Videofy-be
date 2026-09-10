@@ -17,6 +17,16 @@ import { ApiOperation } from '@nestjs/swagger';
 export class VideosController {
   constructor(private readonly videosService: VideosService) {}
 
+  // Relate video
+  @Get(':id/related')
+  @ApiOperation({
+    summary: 'Mendapatkan rekomendasi video selanjutnya (Personal)',
+  })
+  async getRelated(@Param('id') id: string, @Query('limit') limit?: number) {
+    const maxResults = limit ? Number(limit) : 10;
+    return this.videosService.getRelatedVideos(id, maxResults);
+  }
+
   // Favorite video
   @Post(':id/favorite')
   @ApiOperation({
