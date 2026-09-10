@@ -119,8 +119,8 @@ export class UploadService {
               await tx.tag.create({
                 data: {
                   id: tagIdOrName,
-                  name: `Tag-${tagIdOrName}`,
-                  slug: `tag-${tagIdOrName.toLowerCase()}-${uniqueSuffix}`,
+                  name: tagIdOrName,
+                  slug: `${tagIdOrName.toLowerCase()}-${uniqueSuffix}`,
                 },
               });
             }

@@ -4,8 +4,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import { resetStorageFiles } from '../lib/helper';
 
 @Injectable()
 export class SystemService {
@@ -17,7 +16,7 @@ export class SystemService {
     try {
       await this.resetDatabase();
 
-      await this.resetStorageFiles();
+      await resetStorageFiles();
 
       return {
         success: true,
@@ -45,43 +44,5 @@ export class SystemService {
     ]);
 
     this.logger.log('Seluruh tabel database berhasil dikosongkan.');
-  }
-
-  private async resetStorageFiles() {
-    const relativeStoragePath =
-      process.env.STORAGE_RELATIVE_PATH || '../infra/storage/dev';
-    const storageDir = path.resolve(process.cwd(), relativeStoragePath);
-
-    try {
-      await fs.access(storageDir);
-
-      const files = await fs.readdir(storageDir);
-
-      for (const file of files) {
-        const filePath = path.join(storageDir, file);
-        await fs.rm(filePath, { recursive: true, force: true });
-      }
-
-      await fs.mkdir(path.join(storageDir, 'thumbnails'), { recursive: true });
-
-      await fs.mkdir(path.join(storageDir, 'videos'), { recursive: true });
-
-      this.logger.log(
-        `Storage di ${storageDir} berhasil dibersihkan dan diinisialisasi ulang.`,
-      );
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
-        await fs.mkdir(storageDir, { recursive: true });
-        await fs.mkdir(path.join(storageDir, 'thumbnails'), {
-          recursive: true,
-        });
-
-        this.logger.log(
-          `Folder storage tidak ditemukan, membuat baru terstruktur di ${storageDir}.`,
-        );
-      } else {
-        throw error;
-      }
-    }
   }
 }
