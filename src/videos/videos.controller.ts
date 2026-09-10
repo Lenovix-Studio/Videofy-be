@@ -5,6 +5,7 @@ import {
   ParseUUIDPipe,
   Param,
   Delete,
+  StreamableFile,
 } from '@nestjs/common';
 import { VideosService } from './videos.service';
 import { GetVideosQueryDto } from './dto/get-videos-query.dto';
@@ -14,6 +15,15 @@ import { ApiOperation } from '@nestjs/swagger';
 @Controller('videos')
 export class VideosController {
   constructor(private readonly videosService: VideosService) {}
+
+  // Download video
+  @Get(':id/download')
+  @ApiOperation({ summary: 'Download Video file by ID' })
+  async downloadVideo(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<StreamableFile> {
+    return this.videosService.downloadVideo(id);
+  }
 
   // DELETE video by ID
   @Delete(':id')

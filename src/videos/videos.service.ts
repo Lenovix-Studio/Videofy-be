@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  StreamableFile,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GetVideosQueryDto } from './dto/get-videos-query.dto';
 import { VideoDetailResponseDto } from './dto/video-detail-response.dto';
@@ -7,6 +14,50 @@ import { DeleteFile } from '../lib/helper';
 @Injectable()
 export class VideosService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async downloadVideo(id: string): Promise<StreamableFile> {
+    const storageRelativePath =
+      process.env.STORAGE_RELATIVE_PATH || '../infra/storage/dev';
+
+    const storageRoot = path.resolve(process.cwd(), storageRelativePath);
+
+    const video = await this.prisma.video.findUnique({
+      where: { id },
+      select: {
+        title: true,
+        filePath: true,
+        fileName: true,
+        mimeType: true,
+        size: true,
+      },
+    });
+
+    if (!video || !video.filePath) {
+      throw new NotFoundException(
+        'Video tidak ditemukan atau data file tidak lengkap',
+      );
+    }
+
+    const absoluteFilePath = path.join(storageRoot, video.filePath);
+
+    Logger.log(`[Download] Membaca file dari path: ${absoluteFilePath}`);
+
+    if (!fs.existsSync(absoluteFilePath)) {
+      throw new NotFoundException(
+        'File fisik video tidak ditemukan di storage server',
+      );
+    }
+
+    const downloadName = video.fileName || `${video.title || 'video'}.mp4`;
+
+    const fileStream = fs.createReadStream(absoluteFilePath);
+
+    return new StreamableFile(fileStream, {
+      type: video.mimeType || 'video/mp4',
+      disposition: `attachment; filename="${encodeURIComponent(downloadName)}"`,
+      length: video.size ? Number(video.size) : undefined,
+    });
+  }
 
   async deleteVideo(id: string): Promise<{ message: string }> {
     const video = await this.prisma.video.findUnique({
