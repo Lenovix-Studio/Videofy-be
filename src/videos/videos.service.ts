@@ -15,6 +15,44 @@ import { DeleteFile } from '../lib/helper';
 export class VideosService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async toggleFavorite(videoId: string): Promise<{ isFavorite: boolean }> {
+    const videoExists = await this.prisma.video.findUnique({
+      where: { id: videoId },
+    });
+
+    if (!videoExists) {
+      throw new NotFoundException('Video tidak ditemukan');
+    }
+
+    const existingFavorite = await this.prisma.favorite.findFirst({
+      where: { videoId },
+    });
+
+    if (existingFavorite) {
+      await this.prisma.favorite.delete({
+        where: { id: existingFavorite.id },
+      });
+
+      await this.prisma.video.update({
+        where: { id: videoId },
+        data: { isFavorite: false },
+      });
+
+      return { isFavorite: false };
+    } else {
+      await this.prisma.favorite.create({
+        data: { videoId },
+      });
+
+      await this.prisma.video.update({
+        where: { id: videoId },
+        data: { isFavorite: true },
+      });
+
+      return { isFavorite: true };
+    }
+  }
+
   async downloadVideo(id: string): Promise<StreamableFile> {
     const storageRelativePath =
       process.env.STORAGE_RELATIVE_PATH || '../infra/storage/dev';

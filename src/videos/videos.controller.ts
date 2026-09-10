@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Query,
+  Post,
   ParseUUIDPipe,
   Param,
   Delete,
@@ -15,6 +16,17 @@ import { ApiOperation } from '@nestjs/swagger';
 @Controller('videos')
 export class VideosController {
   constructor(private readonly videosService: VideosService) {}
+
+  // Favorite video
+  @Post(':id/favorite')
+  @ApiOperation({
+    summary: 'Toggle favorite status via Favorite table (POST/DELETE logic)',
+  })
+  async toggleFavorite(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<{ isFavorite: boolean }> {
+    return this.videosService.toggleFavorite(id);
+  }
 
   // Download video
   @Get(':id/download')

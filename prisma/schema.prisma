@@ -16,7 +16,7 @@ model Video {
   thumbnailPath String?
   fileName      String
   duration      Int        @default(0)
-  size          BigInt     @default(0)
+  size          BigInt     @default(0) // Catatan: Butuh transformator JSON di NestJS
   mimeType      String     @default("video/mp4")
   uploader      String     @default("Admin")
   views         Int        @default(0)
@@ -27,6 +27,8 @@ model Video {
   favorites     Favorite?
   histories     History[]
   tags          VideoTag[]
+
+  @@index([createdAt(sort: Desc)])
 }
 
 model Tag {
