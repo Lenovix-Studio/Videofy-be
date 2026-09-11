@@ -7,15 +7,68 @@ import {
   Param,
   Delete,
   StreamableFile,
+  Put,
+  UseInterceptors,
+  Body,
+  UploadedFiles,
 } from '@nestjs/common';
 import { VideosService } from './videos.service';
 import { GetVideosQueryDto } from './dto/get-videos-query.dto';
 import { VideoDetailResponseDto } from './dto/video-detail-response.dto';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { UpdateVideoDto } from './dto/update-video.dto';
+import { dynamicStorage } from '../lib/storage';
 
 @Controller('videos')
 export class VideosController {
   constructor(private readonly videosService: VideosService) {}
+
+  // Update video
+  @Put(':id')
+  @ApiOperation({ summary: 'Memperbarui data video dan file (jika ada)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', example: 'Tutorial NestJS Updated' },
+        description: { type: 'string', example: 'Deskripsi baru' },
+        source: { type: 'string', example: 'https://example.com' },
+        tags: { type: 'string', example: 'nestjs, backend, typescript' },
+        video: {
+          type: 'string',
+          format: 'binary',
+          description: 'File video baru (opsional)',
+        },
+        thumbnail: {
+          type: 'string',
+          format: 'binary',
+          description: 'File gambar thumbnail baru (opsional)',
+        },
+      },
+    },
+  })
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'video', maxCount: 1 },
+        { name: 'thumbnail', maxCount: 1 },
+      ],
+      { storage: dynamicStorage },
+    ),
+  )
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateVideoDto: UpdateVideoDto,
+    @UploadedFiles()
+    files: {
+      video?: Express.Multer.File[];
+      thumbnail?: Express.Multer.File[];
+    },
+  ) {
+    return this.videosService.update(id, updateVideoDto, files);
+  }
 
   // Relate video
   @Get(':id/related')

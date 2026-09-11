@@ -9,11 +9,120 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { GetVideosQueryDto } from './dto/get-videos-query.dto';
 import { VideoDetailResponseDto } from './dto/video-detail-response.dto';
-import { DeleteFile, formatDate, formatDuration } from '../lib/helper';
+import {
+  DeleteFile,
+  formatDate,
+  formatDuration,
+  formatVideoResponse,
+  safeDeleteFile,
+  slugify,
+} from '../lib/helper';
+import { UpdateVideoDto } from './dto/update-video.dto';
+import { getStorageBasePath } from '../lib/storage';
 
 @Injectable()
 export class VideosService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async update(
+    id: string,
+    updateVideoDto: UpdateVideoDto,
+    files?: {
+      video?: Express.Multer.File[];
+      thumbnail?: Express.Multer.File[];
+    },
+  ) {
+    const existingVideo = await this.prisma.video.findUnique({
+      where: { id },
+    });
+
+    if (!existingVideo) {
+      throw new NotFoundException(`Video dengan ID ${id} tidak ditemukan.`);
+    }
+
+    let tagsList: string[] | undefined = undefined;
+    if (updateVideoDto.tags !== undefined) {
+      tagsList = updateVideoDto.tags
+        ? updateVideoDto.tags
+            .split(',')
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+        : [];
+    }
+
+    const updateData: any = {
+      ...(updateVideoDto.title && { title: updateVideoDto.title }),
+      ...(updateVideoDto.description !== undefined && {
+        description: updateVideoDto.description,
+      }),
+      ...(updateVideoDto.source !== undefined && {
+        source: updateVideoDto.source,
+      }),
+    };
+
+    if (tagsList !== undefined) {
+      updateData.tags = {
+        deleteMany: {},
+        create: tagsList.map((tagName) => {
+          const slug = slugify(tagName);
+          return {
+            tag: {
+              connectOrCreate: {
+                where: { name: tagName },
+                create: {
+                  name: tagName,
+                  slug: slug,
+                },
+              },
+            },
+          };
+        }),
+      };
+    }
+
+    if (files?.video && files.video.length > 0) {
+      const videoFile = files.video[0];
+
+      const relativeVideoPath = path
+        .relative(getStorageBasePath(), videoFile.path)
+        .replace(/\\/g, '/');
+
+      updateData.videoUrl = `/media/${relativeVideoPath}`;
+      updateData.filePath = `/${relativeVideoPath}`;
+      updateData.fileName = videoFile.filename;
+      updateData.size = BigInt(videoFile.size);
+      updateData.mimeType = videoFile.mimetype;
+
+      await safeDeleteFile(existingVideo.filePath);
+    }
+
+    if (files?.thumbnail && files.thumbnail.length > 0) {
+      const thumbFile = files.thumbnail[0];
+
+      const relativeThumbPath = path
+        .relative(getStorageBasePath(), thumbFile.path)
+        .replace(/\\/g, '/');
+
+      updateData.thumbnailUrl = `/media/${relativeThumbPath}`;
+      updateData.thumbnailPath = `/${relativeThumbPath}`;
+
+      await safeDeleteFile(existingVideo.thumbnailPath);
+    }
+
+    const updatedVideo = await this.prisma.video.update({
+      where: { id },
+      data: updateData,
+      include: {
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
+      },
+    });
+
+    return formatVideoResponse(updatedVideo);
+  }
 
   async getRelatedVideos(videoId: string, limit = 10) {
     const currentVideo = await this.prisma.video.findUnique({

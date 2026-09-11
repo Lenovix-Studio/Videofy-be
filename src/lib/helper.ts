@@ -4,6 +4,24 @@ import { Logger } from '@nestjs/common';
 import ffmpeg from 'fluent-ffmpeg';
 const logger = new Logger('FFmpegUtils');
 
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+// Convert BigInt to Number
+export function formatVideoResponse(video: any) {
+  if (!video) return null;
+  return {
+    ...video,
+    size: Number(video.size),
+  };
+}
+
 // Format Date
 export function formatDate(date: Date): string {
   return new Date(date).toLocaleDateString('id-ID', {
