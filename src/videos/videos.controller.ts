@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Query,
-  Post,
   ParseUUIDPipe,
   Param,
   Delete,
@@ -78,17 +77,6 @@ export class VideosController {
   async getRelated(@Param('id') id: string, @Query('limit') limit?: number) {
     const maxResults = limit ? Number(limit) : 10;
     return this.videosService.getRelatedVideos(id, maxResults);
-  }
-
-  // Favorite video
-  @Post(':id/favorite')
-  @ApiOperation({
-    summary: 'Toggle favorite status via Favorite table (POST/DELETE logic)',
-  })
-  async toggleFavorite(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<{ isFavorite: boolean }> {
-    return this.videosService.toggleFavorite(id);
   }
 
   // Download video
