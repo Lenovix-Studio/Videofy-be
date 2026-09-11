@@ -108,22 +108,29 @@ export class UploadService {
       }
 
       const video = await this.prisma.$transaction(async (tx) => {
+        const finalTagIds: string[] = [];
+
         if (parsedTagIds.length > 0) {
           for (const tagIdOrName of parsedTagIds) {
-            const existingTag = await tx.tag.findUnique({
-              where: { id: tagIdOrName },
+            let existingTag = await tx.tag.findFirst({
+              where: {
+                OR: [{ id: tagIdOrName }, { name: tagIdOrName }],
+              },
             });
 
             if (!existingTag) {
               const uniqueSuffix = Math.random().toString(36).substring(2, 7);
-              await tx.tag.create({
-                data: {
-                  id: tagIdOrName,
+              existingTag = await tx.tag.upsert({
+                where: { name: tagIdOrName },
+                update: {},
+                create: {
                   name: tagIdOrName,
-                  slug: `${tagIdOrName.toLowerCase()}-${uniqueSuffix}`,
+                  slug: `${tagIdOrName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${uniqueSuffix}`,
                 },
               });
             }
+
+            finalTagIds.push(existingTag.id);
           }
         }
 
@@ -144,9 +151,9 @@ export class UploadService {
             mimeType: videoFile.mimetype,
             uploader: dto.uploader || 'Admin',
             tags:
-              parsedTagIds.length > 0
+              finalTagIds.length > 0
                 ? {
-                    create: parsedTagIds.map((tagId) => ({
+                    create: finalTagIds.map((tagId) => ({
                       tagId: tagId,
                     })),
                   }
