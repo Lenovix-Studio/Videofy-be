@@ -68,4 +68,17 @@ export class HistoryController {
   async removeHistory(@Param('videoId') videoId: string) {
     await this.historyService.removeByHistoryId(videoId);
   }
+
+  // Delete all video history list
+  @Delete('clear-all')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Menghapus seluruh riwayat tontonan' })
+  @ApiResponse({ status: 200, description: 'Seluruh riwayat berhasil dihapus' })
+  async clearAll() {
+    await this.historyService.clearAll();
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Seluruh riwayat tontonan berhasil dihapus',
+    };
+  }
 }

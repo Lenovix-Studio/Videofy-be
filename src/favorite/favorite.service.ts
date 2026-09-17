@@ -97,4 +97,8 @@ export class FavoriteService {
       return { isFavorite: true };
     }
   }
+
+  async clearAll() {
+    return this.prisma.favorite.deleteMany({});
+  }
 }

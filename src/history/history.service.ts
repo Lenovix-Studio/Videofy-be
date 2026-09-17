@@ -134,4 +134,8 @@ export class HistoryService {
       where: { id: historyId },
     });
   }
+
+  async clearAll() {
+    return this.prisma.history.deleteMany({});
+  }
 }

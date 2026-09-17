@@ -5,8 +5,11 @@ import {
   Param,
   ParseUUIDPipe,
   Query,
+  Delete,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { FavoriteService } from './favorite.service';
 import { GetFavoritesQueryDto } from './dto/get-favorites-query.dto';
 
@@ -34,5 +37,18 @@ export class FavoriteController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<{ isFavorite: boolean }> {
     return this.favoriteService.toggleFavorite(id);
+  }
+
+  // Delete All Favorite video list
+  @Delete('clear-all')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Menghapus seluruh daftar favorit' })
+  @ApiResponse({ status: 200, description: 'Semua favorit berhasil dihapus' })
+  async clearAll() {
+    await this.favoriteService.clearAll();
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Seluruh favorit berhasil dihapus',
+    };
   }
 }
