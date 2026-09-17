@@ -7,9 +7,11 @@ import { SystemModule } from './system/system.module.js';
 import { VideosModule } from './videos/videos.module.js';
 import { TagsModule } from './tags/tags.module.js';
 import { FavoriteModule } from './favorite/favorite.module.js';
+import { HistoryModule } from './history/history.module.js';
 
 @Module({
   imports: [
+    HistoryModule,
     PrismaModule,
     UploadModule,
     SystemModule,
