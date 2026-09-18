@@ -69,7 +69,7 @@ export class FavoriteService {
       throw new NotFoundException('Video tidak ditemukan');
     }
 
-    const existingFavorite = await this.prisma.favorite.findFirst({
+    const existingFavorite = await this.prisma.favorite.findUnique({
       where: { videoId },
     });
 
@@ -78,20 +78,10 @@ export class FavoriteService {
         where: { id: existingFavorite.id },
       });
 
-      await this.prisma.video.update({
-        where: { id: videoId },
-        data: { isFavorite: false },
-      });
-
       return { isFavorite: false };
     } else {
       await this.prisma.favorite.create({
         data: { videoId },
-      });
-
-      await this.prisma.video.update({
-        where: { id: videoId },
-        data: { isFavorite: true },
       });
 
       return { isFavorite: true };
