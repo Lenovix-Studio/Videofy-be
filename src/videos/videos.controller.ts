@@ -108,7 +108,9 @@ export class VideosController {
 
   // GET video for homepage
   @Get()
-  @ApiOperation({ summary: 'Get Video for homepage' })
+  @ApiOperation({
+    summary: 'Get Video for homepage with pagination and search',
+  })
   async getVideos(@Query() query: GetVideosQueryDto) {
     return this.videosService.findAll(query);
   }

@@ -6,6 +6,7 @@ import {
   NotFoundException,
   StreamableFile,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GetVideosQueryDto } from './dto/get-videos-query.dto';
 import { VideoDetailResponseDto } from './dto/video-detail-response.dto';
@@ -305,8 +306,18 @@ export class VideosService {
     const limit = Number(query.limit) || 12;
     const skip = (page - 1) * limit;
 
+    const where: Prisma.VideoWhereInput = query.search
+      ? {
+          title: {
+            contains: query.search.trim(),
+            mode: 'insensitive',
+          },
+        }
+      : {};
+
     const [videos, totalItems] = await Promise.all([
       this.prisma.video.findMany({
+        where,
         select: {
           id: true,
           title: true,
@@ -321,7 +332,7 @@ export class VideosService {
         skip: skip,
         take: limit,
       }),
-      this.prisma.video.count(),
+      this.prisma.video.count({ where }),
     ]);
 
     const totalPages = Math.ceil(totalItems / limit);
