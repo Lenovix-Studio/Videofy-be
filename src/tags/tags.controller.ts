@@ -41,7 +41,7 @@ export class TagsController {
     return this.tagsService.findVideosByTag(tagId, parsedPage, parsedLimit);
   }
 
-  // get list tag
+  // get count tag
   @Get()
   @ApiOperation({ summary: 'Mengambil daftar tag terpopuler' })
   @ApiQuery({

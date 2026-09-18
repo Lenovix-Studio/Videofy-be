@@ -87,45 +87,69 @@ export class UploadService {
         this.logger.warn(`Gagal mengekstrak durasi video: ${err.message}`);
       }
 
-      let parsedTagIds: string[] = [];
+      let parsedTags: string[] = [];
       if (dto.tagIds) {
         if (Array.isArray(dto.tagIds)) {
-          parsedTagIds = dto.tagIds.map((id) => String(id).trim());
+          parsedTags = dto.tagIds.map((item) => String(item).trim());
         } else if (typeof dto.tagIds === 'string') {
           const trimmed = dto.tagIds.trim();
           if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
             try {
-              parsedTagIds = JSON.parse(trimmed).map((id: any) =>
-                String(id).trim(),
+              parsedTags = JSON.parse(trimmed).map((item: any) =>
+                String(item).trim(),
               );
             } catch {
               this.logger.warn('Format JSON tagIds tidak valid');
             }
           } else if (trimmed.length > 0) {
-            parsedTagIds = trimmed.split(',').map((id) => id.trim());
+            parsedTags = trimmed.split(',').map((item) => item.trim());
           }
         }
       }
 
+      parsedTags = Array.from(
+        new Set(parsedTags.filter((t) => t && t.length > 0)),
+      );
+
       const video = await this.prisma.$transaction(async (tx) => {
         const finalTagIds: string[] = [];
 
-        if (parsedTagIds.length > 0) {
-          for (const tagIdOrName of parsedTagIds) {
+        if (parsedTags.length > 0) {
+          for (const tagIdOrName of parsedTags) {
             let existingTag = await tx.tag.findFirst({
               where: {
-                OR: [{ id: tagIdOrName }, { name: tagIdOrName }],
+                OR: [
+                  { id: tagIdOrName },
+                  { name: { equals: tagIdOrName, mode: 'insensitive' } },
+                ],
               },
             });
 
             if (!existingTag) {
-              const uniqueSuffix = Math.random().toString(36).substring(2, 7);
+              let baseSlug = tagIdOrName
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
+              if (!baseSlug) {
+                baseSlug = 'tag';
+              }
+
+              const existingSlug = await tx.tag.findUnique({
+                where: { slug: baseSlug },
+              });
+
+              const finalSlug = existingSlug
+                ? `${baseSlug}-${Math.random().toString(36).substring(2, 7)}`
+                : baseSlug;
+
               existingTag = await tx.tag.upsert({
                 where: { name: tagIdOrName },
                 update: {},
                 create: {
                   name: tagIdOrName,
-                  slug: `${tagIdOrName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${uniqueSuffix}`,
+                  slug: finalSlug,
                 },
               });
             }
