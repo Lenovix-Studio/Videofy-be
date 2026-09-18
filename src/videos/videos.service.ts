@@ -325,6 +325,18 @@ export class VideosService {
           thumbnailUrl: true,
           duration: true,
           createdAt: true,
+          tags: {
+            take: 1,
+            select: {
+              tag: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                },
+              },
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc',
