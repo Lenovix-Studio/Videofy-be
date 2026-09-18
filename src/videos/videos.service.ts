@@ -289,7 +289,7 @@ export class VideosService {
       source: video.source,
       createdAt: video.createdAt,
       updatedAt: video.updatedAt,
-      isFavorite: video.isFavorite,
+      isFavorite: Boolean(video.favorites),
       tags: video.tags.map((vt) => ({
         id: vt.tag.id,
         name: vt.tag.name,
