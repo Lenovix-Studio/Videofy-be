@@ -1,18 +1,23 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+
+// Muat .env.dev SEBELUM mengimpor modul NestJS
+dotenv.config({ path: path.resolve(process.cwd(), '.env.dev') });
+
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env.dev') });
-
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Ambil CORS origin dari .env.dev atau gunakan fallback jika kosong
+  const allowedOrigins = process.env.CORS_ORIGIN
+
   app.enableCors({
-    origin: ['http://localhost:3000'],
+    origin: allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
@@ -43,7 +48,7 @@ async function bootstrap() {
     return Number(this);
   };
 
-  const port = process.env.PORT || 3001;
+  const port = process.env.PORT!;
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}`);
   console.log(`Swagger UI available on: http://localhost:${port}/docs`);
