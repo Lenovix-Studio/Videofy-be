@@ -80,4 +80,34 @@ export class UploadController {
 
     return this.uploadService.saveVideoMetadata(dto, videoFile, thumbnailFile);
   }
+
+  @Post('upload-photo')
+  @ApiOperation({ summary: 'Upload photo' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileFieldsInterceptor([{ name: 'photo', maxCount: 1 }], {
+      storage: multerStorageConfig,
+      limits: { fileSize: 50 * 1024 * 1024 },
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.startsWith('image/')) {
+          return cb(
+            new BadRequestException('File harus berupa gambar!'),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async uploadPhoto(
+    @UploadedFiles() files: { photo?: Express.Multer.File[] },
+    @Body() dto: any,
+  ) {
+    const photoFile = files?.photo?.[0];
+    if (!photoFile) {
+      throw new BadRequestException('File photo wajib diunggah!');
+    }
+
+    return this.uploadService.savePhotoMetadata(dto, photoFile);
+  }
 }

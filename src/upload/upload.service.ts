@@ -116,10 +116,13 @@ export class UploadService {
 
         if (parsedTags.length > 0) {
           for (const tagIdOrName of parsedTags) {
+            const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(tagIdOrName);
+            
             let existingTag = await tx.tag.findFirst({
               where: {
                 OR: [
                   { id: tagIdOrName },
+                  ...(isUuid ? [{ id: tagIdOrName }] : []),
                   { name: { equals: tagIdOrName, mode: 'insensitive' } },
                 ],
               },
@@ -213,6 +216,53 @@ export class UploadService {
       throw new InternalServerErrorException(
         `Gagal memproses unggahan video: ${globalError.message || 'Error tidak diketahui'}`,
       );
+    }
+  }
+
+  async savePhotoMetadata(dto: any, photoFile: Express.Multer.File) {
+    if (!photoFile) {
+      throw new BadRequestException('File photo wajib diunggah.');
+    }
+    
+    try {
+      const relativePhotoPath = path
+        .relative(this.storageRoot, photoFile.path)
+        .replace(/\\/g, '/');
+
+      const photo = await this.prisma.photo.create({
+        data: {
+          title: dto.title || 'Untitled',
+          description: dto.description || '',
+          photoUrl: `/media/${relativePhotoPath}`,
+          filePath: relativePhotoPath,
+          fileName: photoFile.filename,
+          size: BigInt(photoFile.size),
+          mimeType: photoFile.mimetype,
+          uploader: 'User', 
+        }
+      });
+      
+      // If playlistId is provided, also add it to playlist
+      if (dto.playlistId) {
+        await this.prisma.playlistItem.create({
+          data: {
+            playlistId: dto.playlistId,
+            type: 'photo',
+            photoId: photo.id
+          }
+        });
+      }
+
+      return {
+        ...photo,
+        size: photo.size.toString(),
+      };
+    } catch (globalError: any) {
+      this.logger.error(`Gagal memproses upload photo: ${globalError.message}`);
+      if (photoFile && photoFile.path) {
+        await safeDeleteFile(photoFile.path);
+      }
+      throw new InternalServerErrorException('Gagal memproses unggahan foto');
     }
   }
 }

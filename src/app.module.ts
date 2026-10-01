@@ -8,6 +8,7 @@ import { VideosModule } from './videos/videos.module.js';
 import { TagsModule } from './tags/tags.module.js';
 import { FavoriteModule } from './favorite/favorite.module.js';
 import { HistoryModule } from './history/history.module.js';
+import { PlaylistsModule } from './playlists/playlists.module.js';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { HistoryModule } from './history/history.module.js';
     VideosModule,
     TagsModule,
     FavoriteModule,
+    PlaylistsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

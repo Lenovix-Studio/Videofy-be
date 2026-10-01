@@ -1,0 +1,1 @@
+export const STORAGE_RELATIVE_PATH = process.env.STORAGE_RELATIVE_PATH;

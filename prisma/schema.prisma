@@ -7,7 +7,7 @@ datasource db {
 }
 
 model Video {
-  id            String     @id @default(uuid())
+  id            String         @id @default(uuid())
   title         String
   description   String?
   videoUrl      String
@@ -15,17 +15,18 @@ model Video {
   filePath      String
   thumbnailPath String?
   fileName      String
-  duration      Int        @default(0)
-  size          BigInt     @default(0)
-  mimeType      String     @default("video/mp4")
-  uploader      String     @default("Admin")
-  views         Int        @default(0)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  source        String?    @db.VarChar(100)
+  duration      Int            @default(0)
+  size          BigInt         @default(0)
+  mimeType      String         @default("video/mp4")
+  uploader      String         @default("Admin")
+  views         Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  source        String?        @db.VarChar(100)
   favorites     Favorite?
   histories     History[]
   tags          VideoTag[]
+  playlistItems PlaylistItem[]
 
   @@index([createdAt(sort: Desc)])
 }
@@ -60,4 +61,48 @@ model History {
   video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   @@index([watchedAt])
+}
+
+model Playlist {
+  id          String         @id @default(uuid())
+  title       String
+  slug        String         @unique
+  description String?
+  coverUrl    String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  items       PlaylistItem[]
+}
+
+model PlaylistItem {
+  id         String   @id @default(uuid())
+  playlistId String
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+
+  type String // "video" atau "photo"
+
+  videoId String?
+  video   Video?  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  photoId String?
+  photo   Photo?  @relation(fields: [photoId], references: [id], onDelete: Cascade)
+
+  addedAt DateTime @default(now())
+
+  @@index([playlistId])
+}
+
+model Photo {
+  id            String         @id @default(uuid())
+  title         String
+  description   String?
+  photoUrl      String
+  filePath      String
+  fileName      String
+  size          BigInt         @default(0)
+  mimeType      String         @default("image/jpeg")
+  uploader      String         @default("Admin")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  playlistItems PlaylistItem[]
 }

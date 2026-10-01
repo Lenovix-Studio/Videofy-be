@@ -19,7 +19,12 @@ export const multerStorageConfig = diskStorage({
     const year = now.getFullYear().toString();
     const month = String(now.getMonth() + 1).padStart(2, '0');
 
-    const subFolder = file.fieldname === 'video' ? 'videos' : 'thumbnails';
+    const subFolder =
+      file.fieldname === 'video'
+        ? 'videos'
+        : file.fieldname === 'photo'
+          ? 'photos'
+          : 'thumbnails';
     const targetDir = path.join(storageRoot, subFolder, year, month);
 
     ensureDir(targetDir);
