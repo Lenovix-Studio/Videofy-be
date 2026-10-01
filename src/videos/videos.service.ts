@@ -299,6 +299,16 @@ export class VideosService {
     };
   }
 
+  async getRandomVideo() {
+    const randomVideos = await this.prisma.$queryRaw<any[]>`
+      SELECT id FROM public."Video" ORDER BY RANDOM() LIMIT 1;
+    `;
+    if (!randomVideos || randomVideos.length === 0) {
+      throw new NotFoundException('Tidak ada video');
+    }
+    return { id: randomVideos[0].id };
+  }
+
   async findAll(query: GetVideosQueryDto) {
     const requestedPage = Number(query.page) || 1;
     const page = requestedPage < 1 ? 1 : requestedPage;
@@ -325,6 +335,7 @@ export class VideosService {
           thumbnailUrl: true,
           duration: true,
           createdAt: true,
+          favorites: true,
           tags: {
             take: 1,
             select: {

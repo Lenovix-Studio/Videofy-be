@@ -23,6 +23,13 @@ import { dynamicStorage } from '../lib/storage';
 export class VideosController {
   constructor(private readonly videosService: VideosService) {}
 
+  // GET random video
+  @Get('random')
+  @ApiOperation({ summary: 'Get random video ID' })
+  async getRandomVideo() {
+    return this.videosService.getRandomVideo();
+  }
+
   // Update video
   @Put(':id')
   @ApiOperation({ summary: 'Memperbarui data video dan file (jika ada)' })
