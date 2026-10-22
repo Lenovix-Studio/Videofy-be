@@ -23,7 +23,7 @@
     "db:dev-push": "bun x --env-file=.env.dev prisma db push",
     "db:dev-pull": "bun x --env-file=.env.dev prisma db pull",
     "db:dev-generate": "bun x --env-file=.env.dev prisma generate",
-    "db:prod": "bun x --env-file=.env prisma migrate deploy && bun x --env-file=.env prisma generate"
+    "db:prod": "bun x --env-file=.env prisma db push && bun x --env-file=.env prisma generate"
   },
   "dependencies": {
     "@nestjs/bullmq": "^12.0.0",

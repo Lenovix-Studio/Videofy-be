@@ -5,7 +5,7 @@ dotenv.config({
   path:
     process.env.NODE_ENV === 'dev'
       ? '.env.dev'
-      : process.env.DOTENV_CONFIG_PATH || '.env.dev',
+      : '.env',
 });
 
 export default defineConfig({
