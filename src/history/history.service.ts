@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class HistoryService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Function helper untuk format durasi detik ke MM:SS
+  // Helper: format duration in seconds to MM:SS
   private formatDuration(seconds: number): string {
     if (!seconds) return '00:00';
     const mins = Math.floor(seconds / 60);
@@ -13,7 +13,7 @@ export class HistoryService {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   }
 
-  // Function helper untuk grouping berdasarkan tanggal
+  // Helper: group label based on date
   private getGroupLabel(date: Date): string {
     const now = new Date();
     const targetDate = new Date(date);
@@ -64,18 +64,12 @@ export class HistoryService {
     const [histories, totalVideos] = await this.prisma.$transaction([
       this.prisma.history.findMany({
         where: whereCondition,
-        include: {
-          video: true,
-        },
-        orderBy: {
-          watchedAt: 'desc',
-        },
-        skip: skip,
+        include: { video: true },
+        orderBy: { watchedAt: 'desc' },
+        skip,
         take: limit,
       }),
-      this.prisma.history.count({
-        where: whereCondition,
-      }),
+      this.prisma.history.count({ where: whereCondition }),
     ]);
 
     const groupsMap = new Map<string, any[]>();
@@ -95,6 +89,7 @@ export class HistoryService {
           hour: '2-digit',
           minute: '2-digit',
         }),
+        lastPosition: item.lastPosition,
       };
 
       if (!groupsMap.has(groupLabel)) {
@@ -121,15 +116,39 @@ export class HistoryService {
     };
   }
 
+  async saveWatchPosition(videoId: string, position: number) {
+    const latest = await this.prisma.history.findFirst({
+      where: { videoId },
+      orderBy: { watchedAt: 'desc' },
+    });
+    if (latest) {
+      await this.prisma.history.update({
+        where: { id: latest.id },
+        data: { lastPosition: position, watchedAt: new Date() },
+      });
+    } else {
+      await this.prisma.history.create({
+        data: { videoId, lastPosition: position },
+      });
+    }
+  }
+
+  async getLastPosition(videoId: string): Promise<number> {
+    const latest = await this.prisma.history.findFirst({
+      where: { videoId },
+      orderBy: { watchedAt: 'desc' },
+      select: { lastPosition: true },
+    });
+    return latest?.lastPosition ?? 0;
+  }
+
   async removeByHistoryId(historyId: string) {
     const history = await this.prisma.history.findUnique({
       where: { id: historyId },
     });
-
     if (!history) {
       throw new NotFoundException('Riwayat tidak ditemukan');
     }
-
     return this.prisma.history.delete({
       where: { id: historyId },
     });

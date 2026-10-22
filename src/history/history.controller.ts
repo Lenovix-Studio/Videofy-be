@@ -1,10 +1,12 @@
 import {
+  Body,
   Controller,
-  Get,
   Delete,
-  Param,
+  Get,
   HttpCode,
   HttpStatus,
+  Param,
+  Patch,
   Query,
 } from '@nestjs/common';
 import {
@@ -13,6 +15,7 @@ import {
   ApiResponse,
   ApiParam,
   ApiQuery,
+  ApiBody,
 } from '@nestjs/swagger';
 import { HistoryService } from './history.service';
 
@@ -54,6 +57,37 @@ export class HistoryController {
     @Query('limit') limit?: number,
   ) {
     return this.historyService.getHistoryGrouped({ search, page, limit });
+  }
+
+  // Get last watched position for a video
+  @Get('video/:videoId/position')
+  @ApiOperation({ summary: 'Mengambil posisi terakhir ditonton video' })
+  @ApiParam({ name: 'videoId', description: 'ID video' })
+  async getLastPosition(@Param('videoId') videoId: string) {
+    const position = await this.historyService.getLastPosition(videoId);
+    return { videoId, position };
+  }
+
+  // Save watch position
+  @Patch('video/:videoId/position')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Menyimpan posisi terakhir ditonton video' })
+  @ApiParam({ name: 'videoId', description: 'ID video' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        position: { type: 'number', example: 45 },
+      },
+      required: ['position'],
+    },
+  })
+  async saveWatchPosition(
+    @Param('videoId') videoId: string,
+    @Body('position') position: number,
+  ) {
+    await this.historyService.saveWatchPosition(videoId, position);
+    return { success: true };
   }
 
   // Delete video history
