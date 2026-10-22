@@ -7,27 +7,28 @@ datasource db {
 }
 
 model Video {
-  id            String         @id @default(uuid())
-  title         String
-  description   String?
-  videoUrl      String
-  thumbnailUrl  String?
-  filePath      String
-  thumbnailPath String?
-  fileName      String
-  duration      Int            @default(0)
-  size          BigInt         @default(0)
-  mimeType      String         @default("video/mp4")
-  uploader      String         @default("Admin")
-  views         Int            @default(0)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  source        String?        @db.VarChar(100)
-  transcodeStatus String       @default("COMPLETED")
-  favorites     Favorite?
-  histories     History[]
-  tags          VideoTag[]
-  playlistItems PlaylistItem[]
+  id              String         @id @default(uuid())
+  title           String
+  description     String?
+  videoUrl        String
+  thumbnailUrl    String?
+  filePath        String
+  thumbnailPath   String?
+  fileName        String
+  duration        Int            @default(0)
+  size            BigInt         @default(0)
+  mimeType        String         @default("video/mp4")
+  uploader        String         @default("Admin")
+  views           Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  source          String?        @db.VarChar(100)
+  transcodeStatus String         @default("COMPLETED")
+  favorites       Favorite?
+  histories       History[]
+  tags            VideoTag[]
+  playlistItems   PlaylistItem[]
+  comments        Comment[]
 
   @@index([createdAt(sort: Desc)])
 }
@@ -106,4 +107,15 @@ model Photo {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   playlistItems PlaylistItem[]
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  videoId   String
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([videoId])
+  @@index([createdAt])
 }

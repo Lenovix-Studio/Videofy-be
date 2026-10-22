@@ -20,6 +20,7 @@
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
     "db:dev-migrate": "bun x --env-file=.env.dev prisma migrate dev",
+    "db:dev-push": "bun x --env-file=.env.dev prisma db push",
     "db:dev-pull": "bun x --env-file=.env.dev prisma db pull",
     "db:dev-generate": "bun x --env-file=.env.dev prisma generate",
     "db:prod": "bun x --env-file=.env prisma migrate deploy && bun x --env-file=.env prisma generate"
@@ -63,7 +64,7 @@
     "dotenv-cli": "^11.0.0",
     "oxlint": "^1.58.0",
     "prettier": "^3.4.2",
-    "prisma": "7.10.0",
+    "prisma": "^7.10.0",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
     "typescript": "^6.0.2",
