@@ -19,6 +19,7 @@ export class VideoDetailResponseDto {
   uploader: string;
   views: number;
   source: string | null;
+  transcodeStatus: string;
   createdAt: Date;
   updatedAt: Date;
   isFavorite: boolean;

@@ -9,6 +9,7 @@ import { TagsModule } from './tags/tags.module.js';
 import { FavoriteModule } from './favorite/favorite.module.js';
 import { HistoryModule } from './history/history.module.js';
 import { PlaylistsModule } from './playlists/playlists.module.js';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
@@ -20,6 +21,12 @@ import { PlaylistsModule } from './playlists/playlists.module.js';
     TagsModule,
     FavoriteModule,
     PlaylistsModule,
+    BullModule.forRoot({
+      connection: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: process.env.REDIS_PORT || 6379,
+      },
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],

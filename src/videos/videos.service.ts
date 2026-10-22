@@ -291,12 +291,24 @@ export class VideosService {
       createdAt: video.createdAt,
       updatedAt: video.updatedAt,
       isFavorite: Boolean(video.favorites),
+      transcodeStatus: video.transcodeStatus,
       tags: video.tags.map((vt) => ({
         id: vt.tag.id,
         name: vt.tag.name,
         slug: vt.tag.slug,
       })),
     };
+  }
+
+  async getTranscodeStatus(id: string): Promise<{ transcodeStatus: string }> {
+    const video = await this.prisma.video.findUnique({
+      where: { id },
+      select: { transcodeStatus: true },
+    });
+    if (!video) {
+      throw new NotFoundException(`Video dengan ID ${id} tidak ditemukan`);
+    }
+    return { transcodeStatus: video.transcodeStatus };
   }
 
   async getRandomVideo() {

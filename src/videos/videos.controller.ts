@@ -30,6 +30,13 @@ export class VideosController {
     return this.videosService.getRandomVideo();
   }
 
+  // GET transcode status
+  @Get(':id/status')
+  @ApiOperation({ summary: 'Get transcode status for video' })
+  async getTranscodeStatus(@Param('id', ParseUUIDPipe) id: string) {
+    return this.videosService.getTranscodeStatus(id);
+  }
+
   // Update video
   @Put(':id')
   @ApiOperation({ summary: 'Memperbarui data video dan file (jika ada)' })

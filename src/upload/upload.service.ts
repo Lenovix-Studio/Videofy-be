@@ -11,7 +11,9 @@ import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from 'ffmpeg-static';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadVideoDto } from './dto/upload-video.dto';
-import { generateThumbnailFromVideo, safeDeleteFile } from '../lib/helper';
+import { safeDeleteFile } from '../lib/helper';
+import { VideoProcessorService } from '../videos/video-processor.service';
+import sharp from 'sharp';
 
 if (ffmpegInstaller) {
   ffmpeg.setFfmpegPath(ffmpegInstaller);
@@ -24,7 +26,10 @@ export class UploadService {
     process.env.STORAGE_RELATIVE_PATH || '../infra/storage/dev',
   );
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private videoProcessor: VideoProcessorService,
+  ) {}
 
   async saveVideoMetadata(
     dto: UploadVideoDto,
@@ -45,39 +50,26 @@ export class UploadService {
       let relativeThumbPath: string | null = null;
 
       if (thumbnailFile) {
+        const tempPath = thumbnailFile.path + '.tmp';
+        try {
+          await sharp(thumbnailFile.path)
+            .resize({ width: 1280, withoutEnlargement: true })
+            .jpeg({ quality: 80 })
+            .toFile(tempPath);
+          await fs.unlink(thumbnailFile.path);
+          await fs.rename(tempPath, thumbnailFile.path);
+        } catch (err: any) {
+          this.logger.warn(
+            `Failed to compress custom thumbnail: ${err.message}`,
+          );
+          try {
+            await safeDeleteFile(tempPath);
+          } catch {}
+        }
+
         relativeThumbPath = path
           .relative(this.storageRoot, thumbnailFile.path)
           .replace(/\\/g, '/');
-      } else {
-        try {
-          const now = new Date();
-          const year = now.getFullYear().toString();
-          const month = String(now.getMonth() + 1).padStart(2, '0');
-
-          const thumbDir = path.join(
-            this.storageRoot,
-            'thumbnails',
-            year,
-            month,
-          );
-          await fs.mkdir(thumbDir, { recursive: true });
-
-          const thumbFilename = `${path.parse(videoFile.filename).name}.jpg`;
-
-          generatedThumbFullPath = await generateThumbnailFromVideo(
-            videoFile.path,
-            thumbDir,
-            thumbFilename,
-          );
-
-          relativeThumbPath = path
-            .relative(this.storageRoot, generatedThumbFullPath)
-            .replace(/\\/g, '/');
-        } catch (err: any) {
-          this.logger.warn(
-            `Lanjut tanpa thumbnail karena error pemrosesan: ${err.message}`,
-          );
-        }
       }
 
       let duration = 0;
@@ -116,8 +108,11 @@ export class UploadService {
 
         if (parsedTags.length > 0) {
           for (const tagIdOrName of parsedTags) {
-            const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(tagIdOrName);
-            
+            const isUuid =
+              /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+                tagIdOrName,
+              );
+
             let existingTag = await tx.tag.findFirst({
               where: {
                 OR: [
@@ -196,9 +191,56 @@ export class UploadService {
         });
       });
 
+      if (!thumbnailFile) {
+        const thumbnailDir = path.resolve(
+          this.storageRoot,
+          'thumbnails',
+          path.relative(
+            path.resolve(this.storageRoot, 'videos'),
+            path.dirname(videoFile.path),
+          ),
+        );
+        await fs.mkdir(thumbnailDir, { recursive: true });
+        const thumbFileName = `${path.parse(videoFile.path).name}.jpg`;
+        const thumbOutputPath = path.join(thumbnailDir, thumbFileName);
+
+        await new Promise<void>((resolve, reject) => {
+          ffmpeg(videoFile.path)
+            .screenshots({
+              timestamps: ['00:00:01'],
+              filename: thumbFileName,
+              folder: thumbnailDir,
+              size: '1280x?',
+            })
+            .on('end', () => resolve())
+            .on('error', (err) => reject(err));
+        });
+
+        const relThumbPath = path
+          .relative(this.storageRoot, thumbOutputPath)
+          .replace(/\\/g, '/');
+        await this.prisma.video.update({
+          where: { id: video.id },
+          data: {
+            thumbnailUrl: `/media/${relThumbPath}`,
+            thumbnailPath: relThumbPath,
+          },
+        });
+      }
+
+      await this.videoProcessor.enqueue({
+        videoId: video.id,
+        inputPath: path.resolve(videoFile.path),
+      });
+
+      const updatedVideo = await this.prisma.video.findUnique({
+        where: { id: video.id },
+        include: { tags: { include: { tag: true } } },
+      });
+
       return {
-        ...video,
-        size: video.size.toString(),
+        ...updatedVideo,
+        size: updatedVideo?.size.toString() || video.size.toString(),
       };
     } catch (globalError: any) {
       this.logger.error(
@@ -223,8 +265,19 @@ export class UploadService {
     if (!photoFile) {
       throw new BadRequestException('File photo wajib diunggah.');
     }
-    
+
     try {
+      try {
+        const tempPath = photoFile.path + '.tmp';
+        await sharp(photoFile.path)
+          .resize({ width: 1920, withoutEnlargement: true })
+          .jpeg({ quality: 80 })
+          .toFile(tempPath);
+        await fs.rename(tempPath, photoFile.path);
+      } catch (err: any) {
+        this.logger.warn(`Failed to compress photo: ${err.message}`);
+      }
+
       const relativePhotoPath = path
         .relative(this.storageRoot, photoFile.path)
         .replace(/\\/g, '/');
@@ -238,18 +291,18 @@ export class UploadService {
           fileName: photoFile.filename,
           size: BigInt(photoFile.size),
           mimeType: photoFile.mimetype,
-          uploader: 'User', 
-        }
+          uploader: 'User',
+        },
       });
-      
+
       // If playlistId is provided, also add it to playlist
       if (dto.playlistId) {
         await this.prisma.playlistItem.create({
           data: {
             playlistId: dto.playlistId,
             type: 'photo',
-            photoId: photo.id
-          }
+            photoId: photo.id,
+          },
         });
       }
 
